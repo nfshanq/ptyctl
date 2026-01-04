@@ -51,9 +51,13 @@ pub enum Encoding {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PtyOptions {
+    #[schemars(description = "Enable PTY allocation.")]
     pub enabled: bool,
+    #[schemars(description = "Terminal columns.")]
     pub cols: u16,
+    #[schemars(description = "Terminal rows.")]
     pub rows: u16,
+    #[schemars(description = "Terminal type, e.g. xterm-256color.")]
     pub term: String,
 }
 
@@ -76,16 +80,23 @@ pub struct Timeouts {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
 pub struct ExpectConfig {
+    #[schemars(description = "Regex for shell prompt detection.")]
     pub prompt_regex: Option<String>,
+    #[schemars(description = "Regexes for pager prompts (e.g. --More--).")]
     pub pager_regexes: Option<Vec<String>>,
+    #[schemars(description = "Regexes for error patterns to surface.")]
     pub error_regexes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SshAuth {
+    #[schemars(description = "Authentication method hint (optional).")]
     pub method: Option<String>,
+    #[schemars(description = "Password for password-based authentication.")]
     pub password: Option<String>,
+    #[schemars(description = "Private key in PEM format.")]
     pub private_key_pem: Option<String>,
+    #[schemars(description = "Passphrase for the private key, if needed.")]
     pub passphrase: Option<String>,
 }
 
@@ -109,6 +120,7 @@ pub struct SessionOpenRequest {
     pub pty: Option<PtyOptions>,
     pub timeouts: Option<Timeouts>,
     pub ssh_options: Option<SshOptions>,
+    #[schemars(description = "Expect configuration object.")]
     pub expect: Option<ExpectConfig>,
     pub session_type: Option<SessionType>,
     pub device_id: Option<String>,
@@ -337,12 +349,19 @@ pub struct Capabilities {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SessionRequest {
+    #[schemars(description = "Session action: open/close/list/lock/unlock/heartbeat/status.")]
     pub action: SessionAction,
+    #[schemars(description = "Connection protocol (required for action=open): \"ssh\" or \"telnet\".")]
     pub protocol: Option<Protocol>,
+    #[schemars(description = "Remote host (required for action=open).")]
     pub host: Option<String>,
+    #[schemars(description = "Remote port (optional; defaults to 22 for ssh, 23 for telnet).")]
     pub port: Option<u16>,
+    #[schemars(description = "Username for authentication (optional for telnet/ssh).")]
     pub username: Option<String>,
+    #[schemars(description = "Authentication object. For password auth: {\"password\":\"...\"}.")]
     pub auth: Option<SshAuth>,
+    #[schemars(description = "PTY options. Omit to use defaults (enabled=true, cols=120, rows=40, term=xterm-256color).")]
     pub pty: Option<PtyOptions>,
     pub timeouts: Option<Timeouts>,
     pub ssh_options: Option<SshOptions>,
@@ -351,6 +370,7 @@ pub struct SessionRequest {
     pub device_id: Option<String>,
     pub acquire_lock: Option<bool>,
     pub lock_ttl_ms: Option<u64>,
+    #[schemars(description = "Existing session id (required for non-open actions).")]
     pub session_id: Option<String>,
     pub force: Option<bool>,
     pub task_id: Option<String>,

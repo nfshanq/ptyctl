@@ -793,7 +793,7 @@ impl McpServer {
 impl McpServer {
     #[tool(
         name = "ptyctl_session",
-        description = "Session lifecycle management (open/close/list/lock/unlock/heartbeat/status)."
+        description = "Session lifecycle management (open/close/list/lock/unlock/heartbeat/status). For open: protocol is ssh or telnet; auth/pty/expect are objects (not JSON strings)."
     )]
     async fn session_tool(
         &self,
@@ -805,7 +805,7 @@ impl McpServer {
 
     #[tool(
         name = "ptyctl_session_io",
-        description = "Unified session read/write interface."
+        description = "Unified session read/write interface. Use action=write with data or key; action=read supports cursor/tail and until_regex."
     )]
     async fn session_io_tool(
         &self,
@@ -859,8 +859,21 @@ impl rmcp::ServerHandler for McpServer {
         ServerInfo {
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             instructions: Some(
-                "Use ptyctl_session with action=open to create a session_id; other tools require it."
-                    .to_string(),
+                concat!(
+                    "Tool inputs are validated against the JSON schema; incorrect types or enum values return invalid_params.\n",
+                    "Use ptyctl_session action=open to create a session_id; other tools require it.\n",
+                    "Open parameters:\n",
+                    "- protocol: \"ssh\" or \"telnet\" (no \"local\").\n",
+                    "- auth: object (SshAuth). For password auth: {\"password\":\"...\"}. Do not pass JSON-encoded strings.\n",
+                    "- pty: object with enabled/cols/rows/term; omit to use defaults.\n",
+                    "- expect: object with optional prompt_regex/pager_regexes/error_regexes; do not pass a raw string.\n",
+                    "- For action=open, protocol and host are required; for other actions, session_id is required.\n",
+                    "- action=open only establishes the transport; use ptyctl_session_io to respond to login prompts.\n",
+                    "Example (telnet): {\"action\":\"open\",\"protocol\":\"telnet\",\"host\":\"10.0.0.1\",\"port\":23,\"username\":\"admin\",\"auth\":{\"password\":\"...\"}}\n",
+                    "Example (ssh password): {\"action\":\"open\",\"protocol\":\"ssh\",\"host\":\"10.0.0.1\",\"username\":\"root\",\"auth\":{\"password\":\"...\"}}\n",
+                    "Example (expect): {\"action\":\"open\",\"protocol\":\"ssh\",\"host\":\"10.0.0.1\",\"expect\":{\"prompt_regex\":\"[#>$]\"}}\n",
+                )
+                .to_string(),
             ),
             server_info,
             ..Default::default()
