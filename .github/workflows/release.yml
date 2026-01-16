@@ -44,6 +44,8 @@ jobs:
           targets: aarch64-apple-darwin
       - name: Build
         run: cargo build --release --locked --target aarch64-apple-darwin
+      - name: Ad-hoc sign (macOS)
+        run: codesign --force --sign - target/aarch64-apple-darwin/release/ptyctl
       - name: Package
         run: |
           mkdir -p dist

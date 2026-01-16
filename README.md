@@ -33,15 +33,97 @@ The binary will be at `target/release/ptyctl`. To install it into `/usr/local/bi
 sudo install -m 0755 target/release/ptyctl /usr/local/bin/ptyctl
 ```
 
-### Option B: Download prebuilt binaries (GitHub Releases)
+### Option B: Install via script (recommended)
 
-One-liner install (Linux/macOS, auto-detect):
+The script installs the binary and prints next steps based on the agent/transport you choose.
+
+#### B1. STDIO + Codex (default)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash
 ```
 
-Manual download (if you prefer):
+Add to Codex (stdio):
+
+```bash
+codex mcp add ptyctl-stdio \
+  --env PTYCTL_LOG_LEVEL=info \
+  -- /usr/local/bin/ptyctl serve --transport stdio
+```
+
+#### B2. STDIO + VSCode/Cursor
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash -s -- --agent cursor
+```
+
+Add to VSCode/Cursor settings (`mcpServers`):
+
+```json
+{
+  "mcpServers": {
+    "ptyctl-stdio": {
+      "command": "/usr/local/bin/ptyctl",
+      "args": ["serve", "--transport", "stdio"],
+      "env": {
+        "PTYCTL_LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+```
+
+#### B3. HTTP + Codex
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash -s -- --transport http
+```
+
+Start the server:
+
+```bash
+ptyctl serve --transport http --http-listen 127.0.0.1:8765 --auth-token YOUR_TOKEN
+```
+
+Add to Codex (HTTP):
+
+```bash
+export PTYCTL_AUTH_TOKEN=YOUR_TOKEN
+codex mcp add ptyctl-http \
+  --url http://127.0.0.1:8765/mcp \
+  --bearer-token-env-var PTYCTL_AUTH_TOKEN
+```
+
+#### B4. HTTP + VSCode/Cursor
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash -s -- --transport http --agent cursor
+```
+
+Start the server:
+
+```bash
+ptyctl serve --transport http --http-listen 127.0.0.1:8765 --auth-token YOUR_TOKEN
+```
+
+Add to VSCode/Cursor settings (`mcpServers`):
+
+```json
+{
+  "mcpServers": {
+    "ptyctl-http": {
+      "url": "http://127.0.0.1:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+### Option C: Manual download (no script)
+
+1) Pick the right asset for your OS/arch:
 
 ```bash
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -51,13 +133,24 @@ case "$OS-$ARCH" in
   darwin-arm64) ASSET=ptyctl-macos-arm64.tar.gz ;;
   *) echo "Unsupported OS/arch: $OS-$ARCH" && exit 1 ;;
 esac
+```
+
+2) Download + extract:
+
+```bash
 curl -L -o /tmp/$ASSET https://github.com/nfshanq/ptyctl/releases/latest/download/$ASSET
 tar -xzf /tmp/$ASSET -C /tmp
 BIN_NAME=${ASSET%.tar.gz}
 sudo install -m 0755 /tmp/$BIN_NAME /usr/local/bin/ptyctl
 ```
 
-## Run the MCP Server (installed binary)
+macOS note (manual download via browser/Finder):
+
+```bash
+sudo xattr -d com.apple.quarantine /usr/local/bin/ptyctl
+```
+
+## Run the MCP Server (reference)
 
 ### STDIO mode (for local MCP clients)
 
@@ -86,152 +179,4 @@ For local read-only monitoring (e.g., `ptyctl sessions`, `ptyctl tail`, `ptyctl 
 
 ```bash
 ptyctl serve --transport stdio --control-socket /tmp/ptyctl.sock --control-mode readonly
-```
-
-## Cursor and Codex MCP Setup
-
-### Cursor (MCP servers)
-
-Open Cursor settings and add an MCP server. Example config:
-
-STDIO transport:
-
-```json
-{
-  "mcpServers": {
-    "ptyctl-stdio": {
-      "command": "/usr/local/bin/ptyctl",
-      "args": ["serve", "--transport", "stdio"],
-      "env": {
-        "PTYCTL_LOG_LEVEL": "info"
-      }
-    }
-  }
-}
-```
-
-HTTP transport:
-
-```json
-{
-  "mcpServers": {
-    "ptyctl-http": {
-      "url": "http://127.0.0.1:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_TOKEN"
-      }
-    }
-  }
-}
-```
-
-Notes:
-- Use the full path to the `ptyctl` binary.
-- If you build release: `cargo build --release` then use `target/release/ptyctl`.
-- The HTTP server uses MCP streamable HTTP at `/mcp` (POST JSON-RPC, GET SSE).
-
-### Codex CLI
-
-Add `ptyctl` as an MCP server in your Codex configuration. The exact file location may vary by installation; common locations are:
-- `~/.codex/mcp.json`
-- `~/.config/codex/mcp.json`
-
-Add via `codex mcp add` (STDIO):
-
-```bash
-codex mcp add ptyctl-stdio \
-  --env PTYCTL_LOG_LEVEL=info \
-  -- /usr/local/bin/ptyctl serve --transport stdio
-```
-
-STDIO example:
-
-```json
-{
-  "mcpServers": {
-    "ptyctl-stdio": {
-      "command": "/usr/local/bin/ptyctl",
-      "args": ["serve", "--transport", "stdio"],
-      "env": {
-        "PTYCTL_LOG_LEVEL": "info"
-      }
-    }
-  }
-}
-```
-
-HTTP example:
-
-```json
-{
-  "mcpServers": {
-    "ptyctl-http": {
-      "url": "http://127.0.0.1:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_TOKEN"
-      }
-    }
-  }
-}
-```
-
-## Quick Tool Examples
-
-Open an SSH session (MCP tools/call):
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-      "name": "ptyctl_session",
-      "arguments": {
-        "action": "open",
-        "protocol": "ssh",
-        "host": "example.com",
-        "port": 22,
-        "pty": { "enabled": true, "cols": 120, "rows": 40, "term": "xterm-256color" }
-      }
-    }
-}
-```
-
-Execute a command (exit code via markers):
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call",
-  "params": {
-    "name": "ptyctl_session_exec",
-    "arguments": {
-      "session_id": "SESSION_ID",
-      "cmd": "echo hello",
-      "timeout_ms": 20000
-    }
-  }
-}
-```
-
-Read output with cursor:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "tools/call",
-  "params": {
-      "name": "ptyctl_session_io",
-      "arguments": {
-        "action": "read",
-        "session_id": "SESSION_ID",
-        "cursor": "0",
-        "timeout_ms": 2000,
-        "max_bytes": 65536,
-        "encoding": "utf-8"
-      }
-    }
-}
 ```
