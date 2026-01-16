@@ -20,11 +20,11 @@ jobs:
         with:
           targets: x86_64-unknown-linux-gnu
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
       - name: Package
         run: |
           mkdir -p dist
-          cp target/release/ptyctl dist/ptyctl-linux-amd64
+          cp target/x86_64-unknown-linux-gnu/release/ptyctl dist/ptyctl-linux-amd64
           cd dist
           tar -czf ptyctl-linux-amd64.tar.gz ptyctl-linux-amd64
       - name: Upload artifact
@@ -43,11 +43,11 @@ jobs:
         with:
           targets: aarch64-apple-darwin
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --release --locked --target aarch64-apple-darwin
       - name: Package
         run: |
           mkdir -p dist
-          cp target/release/ptyctl dist/ptyctl-macos-arm64
+          cp target/aarch64-apple-darwin/release/ptyctl dist/ptyctl-macos-arm64
           cd dist
           tar -czf ptyctl-macos-arm64.tar.gz ptyctl-macos-arm64
       - name: Upload artifact

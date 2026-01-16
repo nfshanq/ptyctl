@@ -38,7 +38,7 @@ sudo install -m 0755 target/release/ptyctl /usr/local/bin/ptyctl
 One-liner install (Linux/macOS, auto-detect):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nfshanq/pytctl/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash
 ```
 
 Manual download (if you prefer):
@@ -51,7 +51,7 @@ case "$OS-$ARCH" in
   darwin-arm64) ASSET=ptyctl-macos-arm64.tar.gz ;;
   *) echo "Unsupported OS/arch: $OS-$ARCH" && exit 1 ;;
 esac
-curl -L -o /tmp/$ASSET https://github.com/nfshanq/pytctl/releases/latest/download/$ASSET
+curl -L -o /tmp/$ASSET https://github.com/nfshanq/ptyctl/releases/latest/download/$ASSET
 tar -xzf /tmp/$ASSET -C /tmp
 BIN_NAME=${ASSET%.tar.gz}
 sudo install -m 0755 /tmp/$BIN_NAME /usr/local/bin/ptyctl

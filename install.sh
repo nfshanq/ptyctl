@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_INPUT="${PTYCTL_REPO:-nfshanq/pytctl}"
+REPO_INPUT="${PTYCTL_REPO:-nfshanq/ptyctl}"
 PREFIX="${PREFIX:-/usr/local}"
 BIN_DIR="${PREFIX}/bin"
 BIN_NAME="ptyctl"
