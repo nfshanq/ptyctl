@@ -356,10 +356,9 @@ impl Negotiator {
     }
 
     fn handle_subnegotiation(&mut self, option: u8, data: Vec<u8>) -> Vec<Vec<u8>> {
-        if option == OPT_TTYPE
-            && data.first().copied() == Some(TTYPE_SEND) {
-                return vec![self.build_ttype()];
-            }
+        if option == OPT_TTYPE && data.first().copied() == Some(TTYPE_SEND) {
+            return vec![self.build_ttype()];
+        }
         Vec::new()
     }
 

@@ -50,16 +50,20 @@ fn normalize_git_sha(value: String) -> String {
 }
 
 fn resolve_build_time() -> String {
-    if let Ok(value) = env::var("PTYCTL_BUILD_TIME")
-        && !value.trim().is_empty() {
+    if let Ok(value) = env::var("PTYCTL_BUILD_TIME") {
+        if !value.trim().is_empty() {
             return value;
         }
-    if let Ok(value) = env::var("SOURCE_DATE_EPOCH")
-        && let Ok(epoch) = value.trim().parse::<i64>()
-            && let Ok(dt) = time::OffsetDateTime::from_unix_timestamp(epoch)
-                && let Ok(text) = dt.format(&time::format_description::well_known::Rfc3339) {
+    }
+    if let Ok(value) = env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(epoch) = value.trim().parse::<i64>() {
+            if let Ok(dt) = time::OffsetDateTime::from_unix_timestamp(epoch) {
+                if let Ok(text) = dt.format(&time::format_description::well_known::Rfc3339) {
                     return text;
                 }
+            }
+        }
+    }
 
     time::OffsetDateTime::now_utc()
         .format(&time::format_description::well_known::Rfc3339)

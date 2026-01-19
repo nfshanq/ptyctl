@@ -805,7 +805,7 @@ impl McpServer {
 
     #[tool(
         name = "ptyctl_session_io",
-        description = "Unified session read/write interface. Use action=write with data or key; action=read supports cursor/tail and until_regex."
+        description = "Unified session read/write interface. Use action=write with data or key; action=read supports cursor/tail and until_regex. key supports enter/tab/backspace/delete/home/end/esc/arrow_*/page_* and ctrl_* (aliases: ctrl+c, ctrl-c, arrow-up, page-up)."
     )]
     async fn session_io_tool(
         &self,
@@ -869,6 +869,7 @@ impl rmcp::ServerHandler for McpServer {
                     "- expect: object with optional prompt_regex/pager_regexes/error_regexes; do not pass a raw string.\n",
                     "- For action=open, protocol and host are required; for other actions, session_id is required.\n",
                     "- action=open only establishes the transport; use ptyctl_session_io to respond to login prompts.\n",
+                    "- ptyctl_session_io write key values: enter/tab/backspace/delete/home/end/esc/arrow_*/page_* and ctrl_* (aliases like ctrl+c, ctrl-c, arrow-up, page-up are accepted).\n",
                     "Example (telnet): {\"action\":\"open\",\"protocol\":\"telnet\",\"host\":\"10.0.0.1\",\"port\":23,\"username\":\"admin\",\"auth\":{\"password\":\"...\"}}\n",
                     "Example (ssh password): {\"action\":\"open\",\"protocol\":\"ssh\",\"host\":\"10.0.0.1\",\"username\":\"root\",\"auth\":{\"password\":\"...\"}}\n",
                     "Example (expect): {\"action\":\"open\",\"protocol\":\"ssh\",\"host\":\"10.0.0.1\",\"expect\":{\"prompt_regex\":\"[#>$]\"}}\n",
@@ -1043,17 +1044,22 @@ fn extract_exit_code(
     });
 
     let mut exit_code = None;
-    if let Some(regex) = &primary_regex
-        && let Some(caps) = regex.captures(output)
-            && let Some(rc) = caps.name("rc").and_then(|m| m.as_str().parse::<i32>().ok()) {
+    if let Some(regex) = &primary_regex {
+        if let Some(caps) = regex.captures(output) {
+            if let Some(rc) = caps.name("rc").and_then(|m| m.as_str().parse::<i32>().ok()) {
                 exit_code = Some(rc);
             }
-    if exit_code.is_none()
-        && let Some(regex) = &fallback_regex
-            && let Some(caps) = regex.captures(output)
-                && let Some(rc) = caps.name("rc").and_then(|m| m.as_str().parse::<i32>().ok()) {
+        }
+    }
+    if exit_code.is_none() {
+        if let Some(regex) = &fallback_regex {
+            if let Some(caps) = regex.captures(output) {
+                if let Some(rc) = caps.name("rc").and_then(|m| m.as_str().parse::<i32>().ok()) {
                     exit_code = Some(rc);
                 }
+            }
+        }
+    }
 
     let mut cleaned = output.to_string();
     if let Some(regex) = &primary_regex {

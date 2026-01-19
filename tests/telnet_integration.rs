@@ -5,6 +5,7 @@ use ptyctl::session::{
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use tokio::time::{Duration, Instant, timeout};
 
 const IAC: u8 = 0xff;
 const DO: u8 = 0xfd;
@@ -23,9 +24,24 @@ async fn telnet_negotiation_and_read() {
             .write_all(&[IAC, DO, OPT_TTYPE, IAC, DO, OPT_NAWS])
             .await
             .unwrap();
-        let mut buf = [0u8; 128];
-        let n = socket.read(&mut buf).await.unwrap();
-        let received = buf[..n].to_vec();
+        let mut received = Vec::new();
+        let deadline = Instant::now() + Duration::from_millis(500);
+        while Instant::now() < deadline {
+            let mut buf = [0u8; 128];
+            match timeout(Duration::from_millis(100), socket.read(&mut buf)).await {
+                Ok(Ok(0)) => break,
+                Ok(Ok(n)) => {
+                    received.extend_from_slice(&buf[..n]);
+                    let has_ttype = received.windows(3).any(|w| w == [IAC, WILL, OPT_TTYPE]);
+                    let has_naws = received.windows(3).any(|w| w == [IAC, WILL, OPT_NAWS]);
+                    if has_ttype && has_naws {
+                        break;
+                    }
+                }
+                Ok(Err(_)) => break,
+                Err(_) => {}
+            }
+        }
         socket.write_all(&[IAC, IAC, b'A', b'\n']).await.unwrap();
         received
     });

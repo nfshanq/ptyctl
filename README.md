@@ -11,6 +11,12 @@ Rust-based MCP server for remote interactive control over SSH and Telnet. It sup
 - Transports: STDIO, HTTP (JSON-RPC + SSE).
 - Output cursors: independent readers can follow a session buffer without interfering.
 - Exit code extraction: default marker + ASCII fallback when control characters are stripped.
+- PTY key inputs via `ptyctl_session_io` write `key` (e.g. `enter`, `arrow_up`, `ctrl_c`; aliases like `ctrl+c`, `ctrl-c`, `arrow-up`, `page-up` are accepted).
+
+## Docs
+
+- Usage guide (EN): `docs/usage.md`
+- 使用说明（中文）：`docs/usage.zh-CN.md`
 
 ## Build and Test
 
@@ -20,6 +26,30 @@ cargo test
 ```
 
 ## Install
+
+### LLM Quick Install (copy/paste)
+
+If you want an LLM to install and wire up ptyctl in one shot, use these commands.
+
+STDIO (Codex):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash
+codex mcp add ptyctl-stdio \
+  --env PTYCTL_LOG_LEVEL=info \
+  -- /usr/local/bin/ptyctl serve --transport stdio
+```
+
+HTTP (Codex):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash -s -- --transport http
+ptyctl serve --transport http --http-listen 127.0.0.1:8765 --auth-token YOUR_TOKEN
+export PTYCTL_AUTH_TOKEN=YOUR_TOKEN
+codex mcp add ptyctl-http \
+  --url http://127.0.0.1:8765/mcp \
+  --bearer-token-env-var PTYCTL_AUTH_TOKEN
+```
 
 ### Option A: Build from source (local)
 
@@ -123,25 +153,33 @@ Add to VSCode/Cursor settings (`mcpServers`):
 
 ### Option C: Manual download (no script)
 
-1) Pick the right asset for your OS/arch:
+1) Open the latest release page and download the correct asset for your OS/arch:
 
 ```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$OS-$ARCH" in
-  linux-x86_64) ASSET=ptyctl-linux-amd64.tar.gz ;;
-  darwin-arm64) ASSET=ptyctl-macos-arm64.tar.gz ;;
-  *) echo "Unsupported OS/arch: $OS-$ARCH" && exit 1 ;;
-esac
+https://github.com/nfshanq/ptyctl/releases/latest
 ```
 
-2) Download + extract:
+Assets:
+
+- macOS (Apple Silicon / arm64): `ptyctl-macos-arm64.tar.gz`
+- Linux (x86_64): `ptyctl-linux-amd64.tar.gz`
+
+If your OS/arch is not listed, build from source (Option A).
+
+2) Extract the archive:
 
 ```bash
-curl -L -o /tmp/$ASSET https://github.com/nfshanq/ptyctl/releases/latest/download/$ASSET
-tar -xzf /tmp/$ASSET -C /tmp
-BIN_NAME=${ASSET%.tar.gz}
-sudo install -m 0755 /tmp/$BIN_NAME /usr/local/bin/ptyctl
+tar -xzf ptyctl-macos-arm64.tar.gz
+# or
+tar -xzf ptyctl-linux-amd64.tar.gz
+```
+
+3) Install the binary into `/usr/local/bin`:
+
+```bash
+sudo install -m 0755 ptyctl-macos-arm64 /usr/local/bin/ptyctl
+# or
+sudo install -m 0755 ptyctl-linux-amd64 /usr/local/bin/ptyctl
 ```
 
 macOS note (manual download via browser/Finder):

@@ -50,7 +50,7 @@ impl OutputBuffer {
             }
             self.data.push_back(byte);
         }
-        
+
         self.enforce_limits()
     }
 

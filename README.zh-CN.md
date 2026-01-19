@@ -11,6 +11,12 @@
 - 传输：STDIO、HTTP（JSON-RPC + SSE）。
 - 输出游标：多个读取方可独立跟随会话缓冲互不干扰。
 - 退出码提取：默认 marker + ASCII 兜底（适用于控制字符被剥离的情况）。
+- 通过 `ptyctl_session_io` 的 write `key` 支持 PTY 按键（如 `enter`、`arrow_up`、`ctrl_c`；兼容 `ctrl+c`、`ctrl-c`、`arrow-up`、`page-up` 等别名）。
+
+## 文档
+
+- Usage guide (EN)：`docs/usage.md`
+- 使用说明（中文）：`docs/usage.zh-CN.md`
 
 ## 构建与测试
 
@@ -20,6 +26,28 @@ cargo test
 ```
 
 ## 安装
+
+### LLM 快速安装（可直接复制执行）
+
+STDIO（Codex）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash
+codex mcp add ptyctl-stdio \
+  --env PTYCTL_LOG_LEVEL=info \
+  -- /usr/local/bin/ptyctl serve --transport stdio
+```
+
+HTTP（Codex）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nfshanq/ptyctl/main/install.sh | bash -s -- --transport http
+ptyctl serve --transport http --http-listen 127.0.0.1:8765 --auth-token YOUR_TOKEN
+export PTYCTL_AUTH_TOKEN=YOUR_TOKEN
+codex mcp add ptyctl-http \
+  --url http://127.0.0.1:8765/mcp \
+  --bearer-token-env-var PTYCTL_AUTH_TOKEN
+```
 
 ### 方式 A：从源码编译
 
@@ -123,25 +151,33 @@ ptyctl serve --transport http --http-listen 127.0.0.1:8765 --auth-token YOUR_TOK
 
 ### 方式 C：手动下载安装（不使用脚本）
 
-1) 选择正确的系统/架构对应的资产：
+1) 打开最新 Release 页面并下载对应系统/架构的资产：
 
 ```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-case "$OS-$ARCH" in
-  linux-x86_64) ASSET=ptyctl-linux-amd64.tar.gz ;;
-  darwin-arm64) ASSET=ptyctl-macos-arm64.tar.gz ;;
-  *) echo "不支持的系统/架构: $OS-$ARCH" && exit 1 ;;
-esac
+https://github.com/nfshanq/ptyctl/releases/latest
 ```
 
-2) 下载并安装：
+资产对应关系：
+
+- macOS（Apple Silicon / arm64）：`ptyctl-macos-arm64.tar.gz`
+- Linux（x86_64）：`ptyctl-linux-amd64.tar.gz`
+
+如果你的系统/架构不在列表中，请使用方式 A 从源码编译。
+
+2) 解压压缩包：
 
 ```bash
-curl -L -o /tmp/$ASSET https://github.com/nfshanq/ptyctl/releases/latest/download/$ASSET
-tar -xzf /tmp/$ASSET -C /tmp
-BIN_NAME=${ASSET%.tar.gz}
-sudo install -m 0755 /tmp/$BIN_NAME /usr/local/bin/ptyctl
+tar -xzf ptyctl-macos-arm64.tar.gz
+# 或
+tar -xzf ptyctl-linux-amd64.tar.gz
+```
+
+3) 将二进制安装到 `/usr/local/bin`：
+
+```bash
+sudo install -m 0755 ptyctl-macos-arm64 /usr/local/bin/ptyctl
+# 或
+sudo install -m 0755 ptyctl-linux-amd64 /usr/local/bin/ptyctl
 ```
 
 macOS 提示（通过浏览器/Finder 手动下载时）：

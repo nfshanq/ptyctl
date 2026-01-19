@@ -140,7 +140,7 @@ impl SessionBackend for SshBackend {
     async fn write(&self, data: &[u8]) -> PtyResult<usize> {
         let data = data.to_vec();
         let writer = self.writer.clone();
-        
+
         tokio::task::spawn_blocking(move || -> PtyResult<usize> {
             let mut writer = writer.lock().expect("writer mutex poisoned");
             writer.write(&data).map_err(|err| {
@@ -157,7 +157,7 @@ impl SessionBackend for SshBackend {
 
     async fn resize(&self, cols: u16, rows: u16) -> PtyResult<()> {
         let master = self.master.clone();
-        
+
         tokio::task::spawn_blocking(move || -> PtyResult<()> {
             let master = master.lock().expect("master mutex poisoned");
             master
@@ -181,7 +181,7 @@ impl SessionBackend for SshBackend {
 
     async fn close(&self, _force: bool) -> PtyResult<()> {
         let child = self.child.clone();
-        
+
         tokio::task::spawn_blocking(move || -> PtyResult<()> {
             let mut child = child.lock().expect("child mutex poisoned");
             child.kill().map_err(|err| {
@@ -201,9 +201,7 @@ impl SessionBackend for SshBackend {
     }
 }
 
-fn build_ssh_args(
-    config: SshArgsConfig<'_>,
-) -> PtyResult<Vec<String>> {
+fn build_ssh_args(config: SshArgsConfig<'_>) -> PtyResult<Vec<String>> {
     let mut args = Vec::new();
     args.push("-p".to_string());
     args.push(config.port.to_string());
@@ -270,12 +268,13 @@ fn build_ssh_args(
         }
     }
 
-    if let Some(opts) = config.options
-        && let Some(extra) = &opts.extra_args {
+    if let Some(opts) = config.options {
+        if let Some(extra) = &opts.extra_args {
             for arg in extra {
                 args.push(arg.clone());
             }
         }
+    }
 
     if config.connect_timeout_ms > 0 {
         args.push("-o".to_string());

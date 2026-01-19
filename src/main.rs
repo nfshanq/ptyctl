@@ -164,10 +164,11 @@ async fn run_attach(args: ControlAttachArgs) -> PtyResult<()> {
             }),
         )
         .await?;
-        if let Some(chunk) = response.get("chunk").and_then(|v| v.as_str())
-            && !chunk.is_empty() {
+        if let Some(chunk) = response.get("chunk").and_then(|v| v.as_str()) {
+            if !chunk.is_empty() {
                 print!("{chunk}");
             }
+        }
         if let Some(next_cursor) = response.get("next_cursor").and_then(|v| v.as_str()) {
             cursor = next_cursor.to_string();
         }
@@ -325,10 +326,11 @@ fn print_control_socket_hint(socket_path: &str, err: &PtyError) {
         "Confirm the service is running (`ptyctl serve`), or use `--control-socket` / `PTYCTL_CONTROL_SOCKET` to point at the correct socket."
     );
     eprintln!("Use `ls -l {socket_path}` to check whether the socket exists and its permissions.");
-    if let PtyError::Api(api) = err
-        && let Some(details) = &api.details {
+    if let PtyError::Api(api) = err {
+        if let Some(details) = &api.details {
             eprintln!("Details: {details}");
         }
+    }
 }
 
 fn print_session_not_found_hint() {

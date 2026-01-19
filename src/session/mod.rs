@@ -37,9 +37,7 @@ pub enum SessionType {
     Console,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 pub enum Encoding {
     #[serde(rename = "utf-8", alias = "utf8", alias = "utf_8")]
     #[default]
@@ -47,7 +45,6 @@ pub enum Encoding {
     #[serde(rename = "base64")]
     Base64,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PtyOptions {
@@ -351,7 +348,9 @@ pub struct Capabilities {
 pub struct SessionRequest {
     #[schemars(description = "Session action: open/close/list/lock/unlock/heartbeat/status.")]
     pub action: SessionAction,
-    #[schemars(description = "Connection protocol (required for action=open): \"ssh\" or \"telnet\".")]
+    #[schemars(
+        description = "Connection protocol (required for action=open): \"ssh\" or \"telnet\"."
+    )]
     pub protocol: Option<Protocol>,
     #[schemars(description = "Remote host (required for action=open).")]
     pub host: Option<String>,
@@ -361,7 +360,9 @@ pub struct SessionRequest {
     pub username: Option<String>,
     #[schemars(description = "Authentication object. For password auth: {\"password\":\"...\"}.")]
     pub auth: Option<SshAuth>,
-    #[schemars(description = "PTY options. Omit to use defaults (enabled=true, cols=120, rows=40, term=xterm-256color).")]
+    #[schemars(
+        description = "PTY options. Omit to use defaults (enabled=true, cols=120, rows=40, term=xterm-256color)."
+    )]
     pub pty: Option<PtyOptions>,
     pub timeouts: Option<Timeouts>,
     pub ssh_options: Option<SshOptions>,
@@ -459,21 +460,41 @@ pub enum SessionKey {
     Delete,
     Home,
     End,
+    #[serde(alias = "ctrl+c", alias = "ctrl-c")]
     CtrlC,
+    #[serde(alias = "ctrl+d", alias = "ctrl-d")]
     CtrlD,
+    #[serde(alias = "ctrl+z", alias = "ctrl-z")]
     CtrlZ,
+    #[serde(
+        alias = "ctrl+backslash",
+        alias = "ctrl-backslash",
+        alias = "ctrl+\\",
+        alias = "ctrl-\\"
+    )]
     CtrlBackslash,
+    #[serde(alias = "ctrl+a", alias = "ctrl-a")]
     CtrlA,
+    #[serde(alias = "ctrl+e", alias = "ctrl-e")]
     CtrlE,
+    #[serde(alias = "ctrl+k", alias = "ctrl-k")]
     CtrlK,
+    #[serde(alias = "ctrl+u", alias = "ctrl-u")]
     CtrlU,
+    #[serde(alias = "ctrl+l", alias = "ctrl-l")]
     CtrlL,
     Esc,
+    #[serde(alias = "arrow-up")]
     ArrowUp,
+    #[serde(alias = "arrow-down")]
     ArrowDown,
+    #[serde(alias = "arrow-left")]
     ArrowLeft,
+    #[serde(alias = "arrow-right")]
     ArrowRight,
+    #[serde(alias = "page-up")]
     PageUp,
+    #[serde(alias = "page-down")]
     PageDown,
 }
 
@@ -837,10 +858,11 @@ impl Session {
     }
 
     fn prune_expired_lock(lock: &mut Option<LockInfo>, now: u64) {
-        if let Some(info) = lock.as_ref()
-            && info.expires_at <= now {
+        if let Some(info) = lock.as_ref() {
+            if info.expires_at <= now {
                 *lock = None;
             }
+        }
     }
 }
 
@@ -996,13 +1018,14 @@ impl SessionManager {
         }));
 
         self.sessions.write().await.insert(id.clone(), session);
-        if session_type == SessionType::Console
-            && let Some(device_id) = device_id {
+        if session_type == SessionType::Console {
+            if let Some(device_id) = device_id {
                 self.console_sessions
                     .write()
                     .await
                     .insert(device_id, id.clone());
             }
+        }
 
         if !self.cleanup_running.load(Ordering::SeqCst) {
             self.start_cleanup_task();
@@ -1040,10 +1063,11 @@ impl SessionManager {
         let device_id = session.device_id.clone();
         session.close(force).await?;
         self.sessions.write().await.remove(session_id);
-        if session_type == SessionType::Console
-            && let Some(device_id) = device_id {
+        if session_type == SessionType::Console {
+            if let Some(device_id) = device_id {
                 self.console_sessions.write().await.remove(&device_id);
             }
+        }
         Ok(())
     }
 
@@ -1188,12 +1212,11 @@ pub async fn read_from_session(
     session: &Arc<Session>,
     params: ReadParams,
 ) -> PtyResult<ReadResult> {
-    let start_cursor = params
-        .cursor
-        .unwrap_or_else(|| session.buffer_end_cursor());
+    let start_cursor = params.cursor.unwrap_or_else(|| session.buffer_end_cursor());
     let deadline = Instant::now() + Duration::from_millis(params.timeout_ms);
-    let mut idle_deadline =
-        params.until_idle_ms.map(|ms| Instant::now() + Duration::from_millis(ms));
+    let mut idle_deadline = params
+        .until_idle_ms
+        .map(|ms| Instant::now() + Duration::from_millis(ms));
     let mut current_cursor = start_cursor;
 
     loop {
@@ -1209,9 +1232,9 @@ pub async fn read_from_session(
         if !slice.bytes.is_empty() {
             let mut matched = false;
             let mut bytes = slice.bytes.clone();
-            if let Some(regex) = &params.until_regex
-                && let Ok(text) = std::str::from_utf8(&bytes)
-                    && let Some(mat) = regex.find(text) {
+            if let Some(regex) = &params.until_regex {
+                if let Ok(text) = std::str::from_utf8(&bytes) {
+                    if let Some(mat) = regex.find(text) {
                         matched = true;
                         let end = if params.include_match {
                             mat.end()
@@ -1220,6 +1243,8 @@ pub async fn read_from_session(
                         };
                         bytes.truncate(end);
                     }
+                }
+            }
 
             let waiting_for_input = params.input_hints.as_ref().map(|hints| {
                 if let Ok(text) = std::str::from_utf8(&bytes) {
@@ -1258,8 +1283,8 @@ pub async fn read_from_session(
             });
         }
 
-        if let Some(idle_deadline_at) = idle_deadline
-            && Instant::now() >= idle_deadline_at {
+        if let Some(idle_deadline_at) = idle_deadline {
+            if Instant::now() >= idle_deadline_at {
                 return Ok(ReadResult {
                     slice,
                     matched: false,
@@ -1270,6 +1295,7 @@ pub async fn read_from_session(
                     next_cursor: current_cursor,
                 });
             }
+        }
 
         if Instant::now() >= deadline {
             return Ok(ReadResult {
@@ -1286,10 +1312,11 @@ pub async fn read_from_session(
         let notify = session.notify.notified();
         let next_wait = {
             let mut next = deadline;
-            if let Some(idle) = idle_deadline
-                && idle < next {
+            if let Some(idle) = idle_deadline {
+                if idle < next {
                     next = idle;
                 }
+            }
             next
         };
 
@@ -1346,6 +1373,105 @@ mod tests {
     fn key_bytes_enter_telnet() {
         let bytes = key_bytes(Protocol::Telnet, SessionKey::Enter).expect("key bytes");
         assert_eq!(bytes, vec![b'\r']);
+    }
+
+    #[test]
+    fn session_key_parses_canonical_and_aliases() {
+        let cases = [
+            ("enter", SessionKey::Enter),
+            ("tab", SessionKey::Tab),
+            ("backspace", SessionKey::Backspace),
+            ("delete", SessionKey::Delete),
+            ("home", SessionKey::Home),
+            ("end", SessionKey::End),
+            ("ctrl_c", SessionKey::CtrlC),
+            ("ctrl+c", SessionKey::CtrlC),
+            ("ctrl-c", SessionKey::CtrlC),
+            ("ctrl_d", SessionKey::CtrlD),
+            ("ctrl+d", SessionKey::CtrlD),
+            ("ctrl-d", SessionKey::CtrlD),
+            ("ctrl_z", SessionKey::CtrlZ),
+            ("ctrl+z", SessionKey::CtrlZ),
+            ("ctrl-z", SessionKey::CtrlZ),
+            ("ctrl_backslash", SessionKey::CtrlBackslash),
+            ("ctrl+backslash", SessionKey::CtrlBackslash),
+            ("ctrl-backslash", SessionKey::CtrlBackslash),
+            ("ctrl+\\\\", SessionKey::CtrlBackslash),
+            ("ctrl-\\\\", SessionKey::CtrlBackslash),
+            ("ctrl_a", SessionKey::CtrlA),
+            ("ctrl+a", SessionKey::CtrlA),
+            ("ctrl-a", SessionKey::CtrlA),
+            ("ctrl_e", SessionKey::CtrlE),
+            ("ctrl+e", SessionKey::CtrlE),
+            ("ctrl-e", SessionKey::CtrlE),
+            ("ctrl_k", SessionKey::CtrlK),
+            ("ctrl+k", SessionKey::CtrlK),
+            ("ctrl-k", SessionKey::CtrlK),
+            ("ctrl_u", SessionKey::CtrlU),
+            ("ctrl+u", SessionKey::CtrlU),
+            ("ctrl-u", SessionKey::CtrlU),
+            ("ctrl_l", SessionKey::CtrlL),
+            ("ctrl+l", SessionKey::CtrlL),
+            ("ctrl-l", SessionKey::CtrlL),
+            ("esc", SessionKey::Esc),
+            ("arrow_up", SessionKey::ArrowUp),
+            ("arrow-up", SessionKey::ArrowUp),
+            ("arrow_down", SessionKey::ArrowDown),
+            ("arrow-down", SessionKey::ArrowDown),
+            ("arrow_left", SessionKey::ArrowLeft),
+            ("arrow-left", SessionKey::ArrowLeft),
+            ("arrow_right", SessionKey::ArrowRight),
+            ("arrow-right", SessionKey::ArrowRight),
+            ("page_up", SessionKey::PageUp),
+            ("page-up", SessionKey::PageUp),
+            ("page_down", SessionKey::PageDown),
+            ("page-down", SessionKey::PageDown),
+        ];
+
+        for (raw, expected) in cases {
+            let value = format!("\"{}\"", raw);
+            let parsed: SessionKey =
+                serde_json::from_str(&value).unwrap_or_else(|_| panic!("parse {}", raw));
+            assert_eq!(
+                std::mem::discriminant(&parsed),
+                std::mem::discriminant(&expected),
+                "parsed {}",
+                raw
+            );
+        }
+    }
+
+    #[test]
+    fn key_bytes_match_expected_sequences() {
+        let cases = [
+            (SessionKey::Enter, vec![b'\n']),
+            (SessionKey::Tab, vec![b'\t']),
+            (SessionKey::Backspace, vec![0x7f]),
+            (SessionKey::Delete, vec![0x1b, b'[', b'3', b'~']),
+            (SessionKey::Home, vec![0x1b, b'[', b'H']),
+            (SessionKey::End, vec![0x1b, b'[', b'F']),
+            (SessionKey::CtrlC, vec![0x03]),
+            (SessionKey::CtrlD, vec![0x04]),
+            (SessionKey::CtrlZ, vec![0x1a]),
+            (SessionKey::CtrlBackslash, vec![0x1c]),
+            (SessionKey::CtrlA, vec![0x01]),
+            (SessionKey::CtrlE, vec![0x05]),
+            (SessionKey::CtrlK, vec![0x0b]),
+            (SessionKey::CtrlU, vec![0x15]),
+            (SessionKey::CtrlL, vec![0x0c]),
+            (SessionKey::Esc, vec![0x1b]),
+            (SessionKey::ArrowUp, vec![0x1b, b'[', b'A']),
+            (SessionKey::ArrowDown, vec![0x1b, b'[', b'B']),
+            (SessionKey::ArrowLeft, vec![0x1b, b'[', b'D']),
+            (SessionKey::ArrowRight, vec![0x1b, b'[', b'C']),
+            (SessionKey::PageUp, vec![0x1b, b'[', b'5', b'~']),
+            (SessionKey::PageDown, vec![0x1b, b'[', b'6', b'~']),
+        ];
+
+        for (key, expected) in cases {
+            let actual = key_bytes(Protocol::Ssh, key).expect("key bytes");
+            assert_eq!(actual, expected);
+        }
     }
 
     struct DummyBackend {
@@ -1423,8 +1549,8 @@ mod tests {
                 input_hints: None,
             },
         )
-            .await
-            .expect("read");
+        .await
+        .expect("read");
         assert_eq!(read.slice.bytes, b"hello");
     }
 

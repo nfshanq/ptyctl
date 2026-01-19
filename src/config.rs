@@ -15,7 +15,6 @@ pub enum Transport {
     Both,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -26,7 +25,6 @@ pub enum ControlMode {
     Readwrite,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -36,7 +34,6 @@ pub enum HostKeyPolicy {
     AcceptNew,
     Disabled,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -49,7 +46,6 @@ pub enum TelnetLineEnding {
     PassThrough,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 #[derive(Default)]
@@ -60,7 +56,6 @@ pub struct Config {
     pub telnet: TelnetConfig,
     pub logging: LoggingConfig,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -115,10 +110,11 @@ impl Default for ControlConfig {
 }
 
 fn default_control_socket_path() -> String {
-    if let Ok(dir) = env::var("XDG_RUNTIME_DIR")
-        && is_dir(&dir) {
+    if let Ok(dir) = env::var("XDG_RUNTIME_DIR") {
+        if is_dir(&dir) {
             return format!("{}/ptyctl.sock", dir);
         }
+    }
 
     let uid = unsafe { libc::geteuid() };
     let run_user_dir = format!("/run/user/{}", uid);
@@ -306,10 +302,11 @@ impl Config {
     }
 
     fn apply_env(&mut self) {
-        if let Ok(value) = env::var("PTYCTL_TRANSPORT")
-            && let Some(transport) = parse_transport(&value) {
+        if let Ok(value) = env::var("PTYCTL_TRANSPORT") {
+            if let Some(transport) = parse_transport(&value) {
                 self.server.transport = transport;
             }
+        }
         if let Ok(value) = env::var("PTYCTL_HTTP_LISTEN") {
             self.server.http.listen = value;
         }
@@ -319,10 +316,11 @@ impl Config {
         if let Ok(value) = env::var("PTYCTL_CONTROL_SOCKET") {
             self.server.control.control_socket_path = value;
         }
-        if let Ok(value) = env::var("PTYCTL_CONTROL_MODE")
-            && let Some(mode) = parse_control_mode(&value) {
+        if let Ok(value) = env::var("PTYCTL_CONTROL_MODE") {
+            if let Some(mode) = parse_control_mode(&value) {
                 self.server.control.control_mode = mode;
             }
+        }
     }
 
     fn apply_cli(&mut self, args: &ServeArgs) {
