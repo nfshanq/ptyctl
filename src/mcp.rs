@@ -852,7 +852,7 @@ impl rmcp::ServerHandler for McpServer {
         let server_info = Implementation {
             name: "ptyctl".to_string(),
             title: Some("ptyctl".to_string()),
-            version: env!("CARGO_PKG_VERSION").to_string(),
+            version: env!("PTYCTL_VERSION_LABEL").to_string(),
             icons: None,
             website_url: None,
         };

@@ -1,5 +1,5 @@
 const VERSION_WITH_GIT: &str = concat!(
-    env!("CARGO_PKG_VERSION"),
+    env!("PTYCTL_VERSION_LABEL"),
     " (git ",
     env!("PTYCTL_GIT_SHA"),
     ", built ",
@@ -7,7 +7,7 @@ const VERSION_WITH_GIT: &str = concat!(
     ")",
 );
 const VERSION_NO_GIT: &str = concat!(
-    env!("CARGO_PKG_VERSION"),
+    env!("PTYCTL_VERSION_LABEL"),
     " (built ",
     env!("PTYCTL_BUILD_TIME"),
     ")",
