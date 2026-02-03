@@ -112,6 +112,22 @@ PTY 按键示例：`enter`、`arrow_up`、`ctrl_c`。
 }
 ```
 
+### SSH 默认参数
+
+默认情况下，ptyctl 启动 OpenSSH 时会附带：
+- `StrictHostKeyChecking=no`
+- `UserKnownHostsFile=/dev/null`
+- `GSSAPIAuthentication=no`
+- `GSSAPIDelegateCredentials=yes`
+- `ServerAliveInterval=300`
+- `ServerAliveCountMax=10`
+- `TCPKeepAlive=yes`
+
+可通过 `ssh_options` 覆盖：
+- `host_key_policy`: `strict` | `accept_new` | `disabled`
+- `known_hosts_path`: `/path/to/known_hosts`
+- `extra_args`: 传入 OpenSSH 参数，比如 `-o StrictHostKeyChecking=yes`
+
 ### 读取横幅/提示（游标模式）
 
 ```json

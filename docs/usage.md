@@ -114,6 +114,22 @@ Return the final output.
 }
 ```
 
+### SSH defaults
+
+By default, ptyctl launches OpenSSH with:
+- `StrictHostKeyChecking=no`
+- `UserKnownHostsFile=/dev/null`
+- `GSSAPIAuthentication=no`
+- `GSSAPIDelegateCredentials=yes`
+- `ServerAliveInterval=300`
+- `ServerAliveCountMax=10`
+- `TCPKeepAlive=yes`
+
+Override via `ssh_options`:
+- `host_key_policy`: `strict` | `accept_new` | `disabled`
+- `known_hosts_path`: `/path/to/known_hosts`
+- `extra_args`: pass OpenSSH flags like `-o StrictHostKeyChecking=yes`
+
 ### Read banner/prompt (cursor mode)
 
 ```json

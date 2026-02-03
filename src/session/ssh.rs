@@ -11,6 +11,14 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use tempfile::NamedTempFile;
 
+const DEFAULT_OPENSSH_OPTIONS: &[(&str, &str)] = &[
+    ("GSSAPIAuthentication", "no"),
+    ("GSSAPIDelegateCredentials", "yes"),
+    ("ServerAliveInterval", "300"),
+    ("ServerAliveCountMax", "10"),
+    ("TCPKeepAlive", "yes"),
+];
+
 pub struct SshBackend {
     writer: Arc<Mutex<Box<dyn Write + Send>>>,
     master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
@@ -257,6 +265,11 @@ fn build_ssh_args(config: SshArgsConfig<'_>) -> PtyResult<Vec<String>> {
         }
     }
 
+    for (key, value) in DEFAULT_OPENSSH_OPTIONS {
+        args.push("-o".to_string());
+        args.push(format!("{}={}", key, value));
+    }
+
     if let Some(auth) = config.auth {
         if auth.method.as_deref() == Some("agent") {
             args.push("-o".to_string());
@@ -337,5 +350,29 @@ mod tests {
         assert!(args.contains(&"example.com".to_string()));
         assert!(args.contains(&"-p".to_string()));
         assert!(args.contains(&"22".to_string()));
+    }
+
+    #[test]
+    fn build_ssh_args_defaults_apply_openssh_options() {
+        let ssh_config = SshConfig::default();
+        let args = build_ssh_args(SshArgsConfig {
+            host: "example.com",
+            port: 22,
+            username: None,
+            auth: None,
+            options: None,
+            ssh_config: &ssh_config,
+            key_path: None,
+            connect_timeout_ms: 0,
+        })
+        .expect("args");
+        let joined = args.join(" ");
+        assert!(joined.contains("StrictHostKeyChecking=no"));
+        assert!(joined.contains("UserKnownHostsFile=/dev/null"));
+        assert!(joined.contains("GSSAPIAuthentication=no"));
+        assert!(joined.contains("GSSAPIDelegateCredentials=yes"));
+        assert!(joined.contains("ServerAliveInterval=300"));
+        assert!(joined.contains("ServerAliveCountMax=10"));
+        assert!(joined.contains("TCPKeepAlive=yes"));
     }
 }

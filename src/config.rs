@@ -29,9 +29,9 @@ pub enum ControlMode {
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
 pub enum HostKeyPolicy {
-    #[default]
     Strict,
     AcceptNew,
+    #[default]
     Disabled,
 }
 
@@ -164,6 +164,7 @@ pub struct SshConfig {
     pub use_openssh_config: bool,
     pub config_path: String,
     pub host_key_policy: HostKeyPolicy,
+    #[serde(default = "default_known_hosts_path")]
     pub known_hosts_path: String,
 }
 
@@ -173,10 +174,14 @@ impl Default for SshConfig {
             openssh_path: "ssh".to_string(),
             use_openssh_config: true,
             config_path: String::new(),
-            host_key_policy: HostKeyPolicy::Strict,
-            known_hosts_path: String::new(),
+            host_key_policy: HostKeyPolicy::Disabled,
+            known_hosts_path: default_known_hosts_path(),
         }
     }
+}
+
+fn default_known_hosts_path() -> String {
+    "/dev/null".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -360,5 +365,17 @@ fn parse_control_mode(value: &str) -> Option<ControlMode> {
         "readonly" => Some(ControlMode::Readonly),
         "readwrite" => Some(ControlMode::Readwrite),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ssh_config_defaults_disable_host_key_checking() {
+        let config = SshConfig::default();
+        assert!(matches!(config.host_key_policy, HostKeyPolicy::Disabled));
+        assert_eq!(config.known_hosts_path, "/dev/null");
     }
 }

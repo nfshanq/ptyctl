@@ -98,8 +98,8 @@ Open-only fields (`action="open"`):
   - `connect_timeout_ms`: number (default 15000)
   - `idle_timeout_ms`: number (default 0; 0 means no auto-disconnect; may be overridden by global configuration)
 - `ssh_options`: object (SSH only, optional)
-  - `host_key_policy`: `"strict" | "accept_new" | "disabled"` (default `"strict"`; maps to OpenSSH `StrictHostKeyChecking=yes|accept-new|no`)
-  - `known_hosts_path`: string (optional)
+  - `host_key_policy`: `"strict" | "accept_new" | "disabled"` (default `"disabled"`; maps to OpenSSH `StrictHostKeyChecking=yes|accept-new|no`)
+  - `known_hosts_path`: string (default `/dev/null`)
   - `host_key_fingerprint`: string (optional; for pinning)
   - `use_openssh_config`: boolean (default true; when enabled, OpenSSH parses `~/.ssh/config`, `Include`, `ProxyJump`, etc.)
   - `config_path`: string (optional; passed to OpenSSH as `-F <path>`; only effective when `use_openssh_config=true`)
@@ -293,7 +293,7 @@ Support CLI flags + a config file (e.g., `ptyctl.toml`), at minimum:
   - `output_buffer_max_bytes` (default suggested 2–8 MiB; hard cap; drop oldest output when exceeded and report via `ptyctl_session_io(read).truncated/dropped_bytes`)
   - `output_buffer_max_lines` (default suggested 20000; best-effort; lines split by `\\n`; still bounded by `output_buffer_max_bytes`)
 - `record_tx_events` (default false; record TX events/placeholders only, not content)
-- SSH HostKey policy: `strict|accept_new|disabled` (default strict; maps to OpenSSH `StrictHostKeyChecking=yes|accept-new|no`)
+- SSH HostKey policy: `strict|accept_new|disabled` (default disabled; maps to OpenSSH `StrictHostKeyChecking=yes|accept-new|no`)
 - Log level and log destination (stdout/stderr or file)
 
 Recommended additions:
@@ -332,8 +332,8 @@ record_tx_events = false
 openssh_path = "ssh"
 use_openssh_config = true
 config_path = "" # optional: equivalent to ssh -F <path>
-host_key_policy = "strict" # strict|accept_new|disabled
-known_hosts_path = "" # optional
+host_key_policy = "disabled" # strict|accept_new|disabled
+known_hosts_path = "/dev/null" # optional
 
 [telnet]
 telnet_path = "telnet"
@@ -397,7 +397,7 @@ Example:
 
 ## 8. Security & Compliance
 - **Never log passwords/private keys/tokens** (must be redacted).
-- SSH defaults to strict HostKey checking; relaxing it must require explicit configuration.
+- SSH defaults to disabled HostKey checking and uses `/dev/null` as the known_hosts file; enforcing strict checking requires explicit configuration.
 - Telnet is cleartext: return a `security_warning` in `ptyctl_session` `action="open"` output (or in capabilities) so the caller can warn the user.
 - HTTP mode should bind to `127.0.0.1` by default, unless the user explicitly configures a public bind.
 
